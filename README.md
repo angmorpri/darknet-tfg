@@ -97,6 +97,13 @@ If everything is fine, it should output something like:
 You may also do then more testing with the other default images given at `data/`.
 
 
-## Testing Experiments
-### Measures to analyze
+## Testing Experiments (WIP)
+In order to run some of the tests described below, you will need the ImageMagick suite for editing images.
+
+	sudo apt-get install imagemagick
+
+### Measures to analyze (WIP)
 * *Inference time*: Time taken in predict an image or a group of images.
+* *Accuracy*
+* *Billions FLOPS*
+* *FPS*
