@@ -16,14 +16,15 @@ This implementation will make YOLO work with all the cores of the Raspberry, ins
 ### I. Required libraries
 * **CMake** and **Ninja**, to build NNPACK.
 * **Clang** (original [digitalbrain79](https://github.com/digitalbrain79/darknet-nnpack/) repo requests it, but it does not seem to be used anywhere).
+* **ImageMagick**, in order to run some of the tests described below, you will need this for editing images.
 
-		sudo apt-get install cmake clang
+		sudo apt-get install cmake clang imagemagick
 		git clone git://github.com/ninja-build/ninja.git
 		cd ninja
 		./configure.py --bootstrap
 		sudo cp ninja /usr/sbin/
 		export PATH="${PATH}:~/ninja"
-    
+   	
 Last line may be included in ~/.bashrc file, so it is loaded permanently. If you do so, you may also run `source ~/.bashrc` in order to upload the changes.
 
 ### II. NNPACK
@@ -51,7 +52,7 @@ You may now download the YOLOv3-Tiny weights. Those are optimized to work on con
 
 And then you can try it out:
 
-	./darknet detect cfg/yolov3-tiny.cfg yolov3-tiny.weights data/dog.jpg
+	./darknet detect cfg/yolov3-tiny.cfg yolov3-tiny.weights testing_images/dog.jpg
 
 If everything is fine, it should output something like:
 
@@ -94,14 +95,10 @@ If everything is fine, it should output something like:
 	car: 62%
 	bicycle: 59%
 
-You may also do then more testing with the other default images given at `data/`.
+More testing images can be found at `testing_images/`. You can also use `fast_detect.sh`, which runs the same darknet command but does not need to provide parameters, just the image name found at `testing_images/`.
 
 
 ## Testing Experiments (WIP)
-In order to run some of the tests described below, you will need the ImageMagick suite for editing images.
-
-	sudo apt-get install imagemagick
-
 ### Measures to analyze (WIP)
 * *Inference time*: Time taken in predict an image or a group of images.
 * *Accuracy*
