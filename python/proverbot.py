@@ -32,6 +32,11 @@ def predict_tactics(net, s, n):
     tacs = sorted(tacs, key=lambda x: -x[1])
     return tacs
 
-net = load_net("cfg/coq.test.cfg", "/home/pjreddie/backup/coq.backup", 0)
-t = predict_tactics(net, "+++++\n", 10)
-print t
+
+if __name__ == "__main__":
+    srand(2222222)
+    nnp_initialize()
+
+    net = load_net("cfg/yolov3-tiny.cfg", "yolov3-tiny.weights", 0)
+    t = predict_tactics(net, "+++++\n", 10)
+    print(t)

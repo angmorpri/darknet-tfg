@@ -3,6 +3,7 @@
 *.csv
 *.out
 *.pyc
+*.bck
 old/
 mnist/
 data/
@@ -24,3 +25,6 @@ Icon?
 Thumbs.db
 *.swp
 libdarknet.*
+
+# Extra #
+predictions.png
