@@ -104,3 +104,12 @@ More testing images can be found at `testing_images/`. You can also use `fast_de
 * *Accuracy*
 * *Billions FLOPS*
 * *FPS*
+
+### Preparing Python scripts
+In order to automatize the tests done to gather data, Python scripts will be used. For that, `darknet.py` script is available, but you must take the following steps to make it work. Those are mainly for letting Python know where the required libraries are:
+
+	sudo cp libdarknet.so /usr/local/lib/
+	export LD_LIBRARY_PATH="/usr/local/lib:/usr/lib"
+
+The last line can be copied into `~/.bashrc` file, in order to make it persistent.
+
