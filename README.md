@@ -24,7 +24,7 @@ This implementation will make YOLO work with all the cores of the Raspberry, ins
 		./configure.py --bootstrap
 		sudo cp ninja /usr/sbin/
 		export PATH="${PATH}:~/ninja"
-   	
+
 Last line may be included in ~/.bashrc file, so it is loaded permanently. If you do so, you may also run `source ~/.bashrc` in order to upload the changes.
 
 ### II. NNPACK
@@ -42,7 +42,8 @@ Then you must create the file `/etc/ld.so.conf.d/nnpack.conf` and write `/usr/lo
 	cd darknet-nnpack
 	git checkout yolov3
 	make
-  
+	sudo cp libdarknet.so /usr/local/lib/
+
 Be aware that the Makefile must have the flags NNPACK, NNPACK_FAST and ARM_NEON set to 1.
 
 ### IV. YOLOv3 weights and first test

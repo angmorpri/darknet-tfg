@@ -15,6 +15,12 @@ void train_detector(char *datacfg, char *cfgfile, char *weightfile, int *gpus, i
     float avg_loss = -1;
     network **nets = calloc(ngpus, sizeof(network));
 
+    /*
+    #ifdef NNPACK
+    nnp_initialize();
+    #endif
+    */
+
     srand(time(0));
     int seed = rand();
     int i;
@@ -39,7 +45,6 @@ void train_detector(char *datacfg, char *cfgfile, char *weightfile, int *gpus, i
     float jitter = l.jitter;
 
     list *plist = get_paths(train_images);
-    //int N = plist->size;
     char **paths = (char **)list_to_array(plist);
 
     load_args args = get_base_args(net);
@@ -52,7 +57,6 @@ void train_detector(char *datacfg, char *cfgfile, char *weightfile, int *gpus, i
     args.num_boxes = l.max_boxes;
     args.d = &buffer;
     args.type = DETECTION_DATA;
-    //args.type = INSTANCE_DATA;
     args.threads = 64;
 
     pthread_t load_thread = load_data(args);
@@ -84,30 +88,6 @@ void train_detector(char *datacfg, char *cfgfile, char *weightfile, int *gpus, i
         pthread_join(load_thread, 0);
         train = buffer;
         load_thread = load_data(args);
-
-        /*
-           int k;
-           for(k = 0; k < l.max_boxes; ++k){
-           box b = float_to_box(train.y.vals[10] + 1 + k*5);
-           if(!b.x) break;
-           printf("loaded: %f %f %f %f\n", b.x, b.y, b.w, b.h);
-           }
-         */
-        /*
-           int zz;
-           for(zz = 0; zz < train.X.cols; ++zz){
-           image im = float_to_image(net->w, net->h, 3, train.X.vals[zz]);
-           int k;
-           for(k = 0; k < l.max_boxes; ++k){
-           box b = float_to_box(train.y.vals[zz] + k*5, 1);
-           printf("%f %f %f %f\n", b.x, b.y, b.w, b.h);
-           draw_bbox(im, b, 1, 1,0,0);
-           }
-           show_image(im, "truth11");
-           cvWaitKey(0);
-           save_image(im, "truth11");
-           }
-         */
 
         printf("Loaded: %lf seconds\n", what_time_is_it_now()-time);
 
@@ -151,6 +131,12 @@ void train_detector(char *datacfg, char *cfgfile, char *weightfile, int *gpus, i
     char buff[256];
     sprintf(buff, "%s/%s_final.weights", backup_directory, base);
     save_weights(net, buff);
+    /*
+#ifdef NNPACK
+    //pthreadpool_destroy(net->threadpool);
+    nnp_deinitialize();
+#endif
+*/
 }
 
 
@@ -353,7 +339,7 @@ void validate_detector_flip(char *datacfg, char *cfgfile, char *weightfile, char
         if(fps) fclose(fps[j]);
     }
     if(coco){
-        fseek(fp, -2, SEEK_CUR); 
+        fseek(fp, -2, SEEK_CUR);
         fprintf(fp, "\n]\n");
         fclose(fp);
     }
@@ -479,7 +465,7 @@ void validate_detector(char *datacfg, char *cfgfile, char *weightfile, char *out
         if(fps) fclose(fps[j]);
     }
     if(coco){
-        fseek(fp, -2, SEEK_CUR); 
+        fseek(fp, -2, SEEK_CUR);
         fprintf(fp, "\n]\n");
         fclose(fp);
     }
@@ -622,7 +608,7 @@ void test_detector(char *datacfg, char *cfgfile, char *weightfile, char *filenam
         detection *dets = get_network_boxes(net, im.w, im.h, thresh, hier_thresh, 0, 1, &nboxes);
         printf("%d\n", nboxes);
 	for(int i=0;i<nboxes;i++){
-	   printf("Box %d at (x,y)=(%f,%f) with (w,h)=(%f,%f)\n", i, dets[i].bbox.x, dets[i].bbox.y, dets[i].bbox.w, dets[i].bbox.h); 
+	   printf("Box %d at (x,y)=(%f,%f) with (w,h)=(%f,%f)\n", i, dets[i].bbox.x, dets[i].bbox.y, dets[i].bbox.w, dets[i].bbox.h);
 	}
         //if (nms) do_nms_obj(boxes, probs, l.w*l.h*l.n, l.classes, nms);
         if (nms) do_nms_sort(dets, nboxes, l.classes, nms);
@@ -634,7 +620,7 @@ void test_detector(char *datacfg, char *cfgfile, char *weightfile, char *filenam
         else{
             save_image(im, "predictions");
 #ifdef OPENCV
-            cvNamedWindow("predictions", CV_WINDOW_NORMAL); 
+            cvNamedWindow("predictions", CV_WINDOW_NORMAL);
             if(fullscreen){
                 cvSetWindowProperty("predictions", CV_WND_PROP_FULLSCREEN, CV_WINDOW_FULLSCREEN);
             }
@@ -683,7 +669,7 @@ void censor_detector(char *datacfg, char *cfgfile, char *weightfile, int cam_ind
     }
 
     if(!cap) error("Couldn't connect to webcam.\n");
-    cvNamedWindow(base, CV_WINDOW_NORMAL); 
+    cvNamedWindow(base, CV_WINDOW_NORMAL);
     cvResizeWindow(base, 512, 512);
     float fps = 0;
     int i;
@@ -756,7 +742,7 @@ void extract_detector(char *datacfg, char *cfgfile, char *weightfile, int cam_in
     }
 
     if(!cap) error("Couldn't connect to webcam.\n");
-    cvNamedWindow(base, CV_WINDOW_NORMAL); 
+    cvNamedWindow(base, CV_WINDOW_NORMAL);
     cvResizeWindow(base, 512, 512);
     float fps = 0;
     int i;
