@@ -4,6 +4,7 @@
 *.out
 *.pyc
 *.bck
+*.weights
 old/
 mnist/
 data/
