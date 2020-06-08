@@ -15,9 +15,8 @@ opencv/
 convnet/
 decaf/
 submission/
-testing/coco/
-training/images
-training/labels
+testing/
+training/
 darknet
 darknet_backup
 .fuse*

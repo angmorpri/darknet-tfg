@@ -15,7 +15,7 @@
     identified by the prefix 'py_' in the 'py_utils.c' source code.
 
     Created:        09 May 2020
-    Last modified:  10 May 2020
+    Last modified:  18 May 2020
 """
 
 from __future__ import print_function
@@ -161,7 +161,7 @@ class Detection (object):
         self.objectness = det.objectness
 
     def __str__ (self):
-        ret = "Identified class '{}' with prob {:.4f} at ".format(self.classname, self.prob)
+        ret = "'{}' with prob {:.4f} at ".format(self.classname, self.prob)
         ret += " x = {:.4f}; y = {:.4f}; width = {:.4f}; height = {:.4f}; and objectness = {:.4f}" \
             .format(self.box_x, self.box_y, self.box_w, self.box_h, self.objectness)
         return ret+'\n'
@@ -219,7 +219,7 @@ class YOLOResults (object):
     def short_print (self):
         print()
         print("Inference of {} images".format(len(self.results)))
-        print("Total time lasted = {:.4f}".format(self.time.total))
+        print("Total time taken = {:.4f}".format(self.time.total))
         print("Mean time per image = {:.4f}".format(self.time.mean))
         print("Mean FPS = {:.4f}".format(self.fps))
         print()

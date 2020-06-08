@@ -216,7 +216,7 @@ void correct_boxes(box_label *boxes, int n, float dx, float dy, float sx, float 
 void fill_truth_swag(char *path, float *truth, int classes, int flip, float dx, float dy, float sx, float sy)
 {
     char labelpath[4096];
-    find_replace(path, "images", "labels", labelpath);
+    find_replace(path, "images", "images", labelpath);
     find_replace(labelpath, "JPEGImages", "labels", labelpath);
     find_replace(labelpath, ".jpg", ".txt", labelpath);
     find_replace(labelpath, ".JPG", ".txt", labelpath);
@@ -254,7 +254,7 @@ void fill_truth_swag(char *path, float *truth, int classes, int flip, float dx, 
 void fill_truth_region(char *path, float *truth, int classes, int num_boxes, int flip, float dx, float dy, float sx, float sy)
 {
     char labelpath[4096];
-    find_replace(path, "images", "labels", labelpath);
+    find_replace(path, "images", "images", labelpath);
     find_replace(labelpath, "JPEGImages", "labels", labelpath);
 
     find_replace(labelpath, ".jpg", ".txt", labelpath);
@@ -408,7 +408,7 @@ void fill_truth_iseg(char *path, int num_boxes, float *truth, int classes, int w
 void fill_truth_detection(char *path, int num_boxes, float *truth, int classes, int flip, float dx, float dy, float sx, float sy)
 {
     char labelpath[4096];
-    find_replace(path, "images", "labels", labelpath);
+    find_replace(path, "images", "images", labelpath);
     find_replace(labelpath, "JPEGImages", "labels", labelpath);
 
     find_replace(labelpath, "raw", "labels", labelpath);
@@ -554,7 +554,7 @@ matrix load_regression_labels_paths(char **paths, int n, int k)
     int i,j;
     for(i = 0; i < n; ++i){
         char labelpath[4096];
-        find_replace(paths[i], "images", "labels", labelpath);
+        find_replace(paths[i], "images", "images", labelpath);
         find_replace(labelpath, "JPEGImages", "labels", labelpath);
         find_replace(labelpath, ".BMP", ".txt", labelpath);
         find_replace(labelpath, ".JPEG", ".txt", labelpath);
@@ -598,7 +598,7 @@ matrix load_tags_paths(char **paths, int n, int k)
     //int count = 0;
     for(i = 0; i < n; ++i){
         char label[4096];
-        find_replace(paths[i], "images", "labels", label);
+        find_replace(paths[i], "images", "images", label);
         find_replace(label, ".jpg", ".txt", label);
         FILE *file = fopen(label, "r");
         if (!file) continue;
