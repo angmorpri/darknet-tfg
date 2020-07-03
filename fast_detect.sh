@@ -6,10 +6,16 @@
 [[ $# -ne 1 ]] && { echo "Use: fast_detect.sh <image>"; exit 2; }
 
 # Checking given image exists and running darknet
-IMAGE="testing/$1"
+IMAGE="$1"
 if [ -f "$IMAGE" ]; then
 	identify -format "Image size: %wx%h\n\n" "$IMAGE"
 	./darknet detect cfg/yolov3-tiny.cfg yolov3-tiny.weights "$IMAGE"
 else
-	echo "$IMAGE does not exist."
+	IMAGE="testing/$IMAGE"
+	if [ -f "$IMAGE" ]; then
+		identify -format "Image size: %wx%h\n\n" "$IMAGE"
+		./darknet detect cfg/yolov3-tiny.cfg yolov3-tiny.weights "$IMAGE"
+	else
+		echo "$IMAGE does not exist."
+	fi
 fi

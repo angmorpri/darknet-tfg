@@ -26,7 +26,7 @@ if [ -d "$DIR" ]; then
 
 	# Running
 	touch "$RESULTS"
-	./darknet detector test cfg/coco.data cfg/yolov3-tiny.cfg yolov3-tiny.weights -dont_show < "$OUTFIE" > "$RESULTS"
+	./darknet detector test cfg/coco.data cfg/yolov3-tiny.cfg yolov3-tiny.weights < "$OUTFILE" > "$RESULTS"
 else
 	echo "$DIR does not exist."
 fi

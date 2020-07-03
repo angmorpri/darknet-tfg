@@ -6,12 +6,15 @@ This repository will contain all the workarounds of my TFG.
 Mainly it will consists of Darknet implementation code and testing codes and data.
 The goal is to measure and analyze the performance of YOLOv3 on a Raspberry.
 
+
 ## Build Instructions
 This NNPACK implementation will make TinyYOLOv3 work with all the cores of the Raspberry, instead of the GPU.
 ### Components
 * **NNPACK**, allows us to use all the CPU cores of the Raspberry.
 * **Darknet**, YOLO CNN.
 * **TinyYOLOv3**, pre-trained weights we will use for testing.
+* [Optional] **ImageMagick**, to enhance some image manipulation and extra info.
+
 
 ### I. Required libraries
 * **CMake** and **Ninja**, to build NNPACK.
@@ -26,6 +29,7 @@ This NNPACK implementation will make TinyYOLOv3 work with all the cores of the R
 
 Last line may be included in ~/.bashrc file, so it is loaded permanently. If you do so, you may also run `source ~/.bashrc` in order to upload the changes.
 
+
 ### II. NNPACK
 	git clone https://github.com/shizukachan/NNPACK
 	mkdir build
@@ -35,12 +39,13 @@ Last line may be included in ~/.bashrc file, so it is loaded permanently. If you
 
 Then you must create the file `/etc/ld.so.conf.d/nnpack.conf` and write `/usr/local/lib` in it, so that Darknet knows where NNPACK libraries are located.
 
+
 ### III. Darknet
 In order to install Darknet, you may want just to clone this repository, which contains all the scritps for automatic inference and stats gathering:
 
 	cd
 	git clone https://github.com/angmorpri/darknet-tfg
-	
+
 On the other hand, you can just clone the original repository, in which this one is based:
 
 	cd
@@ -53,7 +58,7 @@ Then, you must `make` the repo. Be aware that the Makefile must have the flags N
 	export LD_LIBRARY_PATH="/usr/local/lib:/usr/lib"
 
 The last line can be included in ~/.bashrc file to load it permanently.
-	
+
 
 ### IV. TinyYOLOv3 weights and first test
 You may now download the TinyYOLOv3 weights. Those are optimized to work on constrained environments, like we are with the Raspberry. It is trained on COCO dataset.
@@ -109,7 +114,13 @@ More testing images can be found at `testing/`. You can also use `fast_detect.sh
 
 
 ## Testing scripts (WIP)
-### `darknet.py`
+The following scripts are used to automatize some actions and gather stats. They are written in Python 3 (at least, Python 3.6). They also require `numpy` and `matplotlib` libraries, which can be installed like:
+
+	sudo apt-get install libatlas-base-dev
+	pip3 install numpy
+	pip3 install matplotlib
+
+### `detect.py`
 (WIP)
 
 ### `plotter.py`
