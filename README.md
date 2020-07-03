@@ -1,13 +1,13 @@
-Based on <https://github.com/zxzhaixiang/darknet-nnpack>
+Based on <https://github.com/shizukachan/darknet-nnpack>
 
 # Darknet with NNPACK for Raspberry Pi 3 B (End-of-degree Project)
 ## Abstract
 This repository will contain all the workarounds of my TFG.
 Mainly it will consists of Darknet implementation code and testing codes and data.
-The goal is to measure and analyze the performance of YOLO on a Raspberry.
+The goal is to measure and analyze the performance of YOLOv3 on a Raspberry.
 
 ## Build Instructions
-This implementation will make YOLO work with all the cores of the Raspberry, instead of the GPU.
+This NNPACK implementation will make TinyYOLOv3 work with all the cores of the Raspberry, instead of the GPU.
 ### Components
 * **NNPACK**, allows us to use all the CPU cores of the Raspberry.
 * **Darknet**, YOLO CNN.
@@ -16,9 +16,8 @@ This implementation will make YOLO work with all the cores of the Raspberry, ins
 ### I. Required libraries
 * **CMake** and **Ninja**, to build NNPACK.
 * **Clang** (original [digitalbrain79](https://github.com/digitalbrain79/darknet-nnpack/) repo requests it, but it does not seem to be used anywhere).
-* **ImageMagick**, in order to run some of the tests described below, you will need this for editing images.
 
-		sudo apt-get install cmake clang imagemagick
+		sudo apt-get install cmake clang
 		git clone git://github.com/ninja-build/ninja.git
 		cd ninja
 		./configure.py --bootstrap
@@ -37,23 +36,33 @@ Last line may be included in ~/.bashrc file, so it is loaded permanently. If you
 Then you must create the file `/etc/ld.so.conf.d/nnpack.conf` and write `/usr/local/lib` in it, so that Darknet knows where NNPACK libraries are located.
 
 ### III. Darknet
+In order to install Darknet, you may want just to clone this repository, which contains all the scritps for automatic inference and stats gathering:
+
 	cd
-	git clone -b yolov3 https://github.com/zxzhaixiang/darknet-nnpack
-	cd darknet-nnpack
-	git checkout yolov3
+	git clone https://github.com/angmorpri/darknet-tfg
+	
+On the other hand, you can just clone the original repository, in which this one is based:
+
+	cd
+	git clone https://github.com/shizukachan/darknet-nnpack
+
+Then, you must `make` the repo. Be aware that the Makefile must have the flags NNPACK, NNPACK_FAST and ARM_NEON set to 1 in order to work properly.
+
 	make
 	sudo cp libdarknet.so /usr/local/lib/
+	export LD_LIBRARY_PATH="/usr/local/lib:/usr/lib"
 
-Be aware that the Makefile must have the flags NNPACK, NNPACK_FAST and ARM_NEON set to 1.
+The last line can be included in ~/.bashrc file to load it permanently.
+	
 
-### IV. YOLOv3 weights and first test
-You may now download the YOLOv3-Tiny weights. Those are optimized to work on constrained environments, like we are.
+### IV. TinyYOLOv3 weights and first test
+You may now download the TinyYOLOv3 weights. Those are optimized to work on constrained environments, like we are with the Raspberry. It is trained on COCO dataset.
 
 	wget https://pjreddie.com/media/files/yolov3-tiny.weights
 
 And then you can try it out:
 
-	./darknet detect cfg/yolov3-tiny.cfg yolov3-tiny.weights testing_images/dog.jpg
+	./darknet detect cfg/yolov3-tiny.cfg yolov3-tiny.weights testing/dog.jpg
 
 If everything is fine, it should output something like:
 
@@ -96,20 +105,13 @@ If everything is fine, it should output something like:
 	car: 62%
 	bicycle: 59%
 
-More testing images can be found at `testing_images/`. You can also use `fast_detect.sh`, which runs the same darknet command but does not need to provide parameters, just the image name found at `testing_images/`.
+More testing images can be found at `testing/`. You can also use `fast_detect.sh`, which runs the same darknet command but does not need to provide parameters, just the image name found at `testing/`.
 
 
-## Testing Experiments (WIP)
-### Measures to analyze (WIP)
-* *Inference time*: Time taken in predict an image or a group of images.
-* *Accuracy*
-* *Billions FLOPS*
-* *FPS*
+## Testing scripts (WIP)
+### `darknet.py`
+(WIP)
 
-### Preparing Python scripts
-In order to automatize the tests done to gather data, Python scripts will be used. For that, `darknet.py` script is available, but you must take the following steps to make it work. Those are mainly for letting Python know where the required libraries are:
-
-	sudo cp libdarknet.so /usr/local/lib/ && export LD_LIBRARY_PATH="/usr/local/lib:/usr/lib"
-
-The last line can be copied into `~/.bashrc` file, in order to make it persistent.
+### `plotter.py`
+(WIP)
 
