@@ -31,6 +31,7 @@ libdarknet.*
 predictions.png
 backup/
 detect_test/
+obj/
 qual_test/
 results/
 training/
