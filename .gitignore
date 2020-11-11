@@ -29,3 +29,9 @@ libdarknet.*
 
 # Extra #
 predictions.png
+backup/
+detect_test/
+qual_test/
+results/
+training/
+yolov3-tiny.weights

@@ -1,37 +1,30 @@
 #!python3
 #-*- coding: utf-8 -*-
 """
-    Wrapper de Darknet para inferencia.
-
-    Éste script ejecuta una detección básica de Darknet, tal y como ésta está
-    implementada en el código fuente (detector.c), pero "envuelta" mediante
-    *ctypes* en código Python que facilita su puesta en marcha.
-
-    También está pensado para realizar la inferencia en múltiples imágenes,
-    incluso obtener estadísticas y presentar gráficas.
-
-    Basado en ./python/darknet.py. Se han tenido que añadir algunas funciones
-    extra en C, para permitir algunas acciones que no podían ser envueltas
-    mediante Python. Todas estas se hallan en 'src/py_utils.c'.
+    Código para inferencia de varias imágenes con Darknet.
+    Utiliza el mismo mecanismo que el código fuente de Darknet mediante un
+    wrapper escrito en Python, basado en ./python/darknet.py.
+    Se han tenido que añadir algunas funciones extra en C, para permitir algunas
+    acciones que no podían ser envueltas. Todas estas se hallan en
+    'src/py_utils.c'.
 
     Creado:                 09 May 2020
-    Última modificación:    03 Jul 2020
+    Última modificación:    08 Nov 2020
 
     @author: Ángel Moreno Prieto
 
 """
 import argparse
-from ctypes import *
-from datetime import datetime
-import numpy
-from os import listdir
-from os.path import isdir, isfile, join
-from pprint import pprint
+import statistics as stats
 import random
+import time
+from ctypes import *
+from os import listdir, mkdir
+from os.path import isdir, isfile, join, basename
+from pprint import pprint
 
-#
-# Wrappers para variables y funciones en C.
-#
+
+# Definiciones necesarias para el wrapper con ctypes
 class BOX (Structure):
     _fields_ = [("x", c_float),
                 ("y", c_float),
@@ -111,16 +104,17 @@ set_net_threadpool.argtypes = [c_void_p]
 set_batch_network = lib.set_batch_network
 set_batch_network.argtypes = [c_void_p, c_int]
 
+draw_predictions = lib.py_draw_predictions
+draw_predictions.argtypes = [IMAGE, POINTER(DETECTION), c_int, c_float, \
+                             POINTER(c_char_p), c_int, c_char_p]
+
 srand = lib.srand
 srand.argtypes = [c_int]
 
 
-#
-# Clases definidas
-#
+# Código principal
 class Accum (object):
     """Acumulador de estadísticas"""
-
     def __init__ (self):
         # Estadísticas a presentar
         self.total = 0.0    # Suma total
@@ -137,13 +131,16 @@ class Accum (object):
         self._accum.append(value)
         self.total = sum(self._accum)
         self.mean = self.total / len(self._accum)
-        self.stdev = numpy.std(self._accum)
+        try:
+            self.stdev = stats.stdev(self._accum)
+        except:
+            self.stdev = 0.0
         self.max = max(self._accum)
         self.min = min(self._accum)
 
     def __str__ (self):
-        ret = f"Mean: {self.mean}; StDev: {self.stdev};" \
-              f"MaxVal: {self.max}; MinVal: {self.min}\n"
+        ret = f"Media: {self.mean}; Desviación: {self.stdev}; MaxVal: {self.max}; " \
+              f"MinVal: {self.min}"
         return ret
 
 
@@ -174,12 +171,10 @@ class Detection (object):
         self.objectness = det.objectness
 
     def __str__ (self):
-        ret = f"'{self.classname}' with prob {self.prob:.4f} at "
-        ret += f" x = {self.box_x:.4f};" \
-               f" y = {self.box_y:.4f};" \
-               f" width = {self.box_w:.4f};" \
-               f" height = {self.box_h:.4f};" \
-               f" and objectness = {self.objectness:.4f}\n"
+        ret = f"{self.classname.decode('utf-8')!r: <10} con prob {self.prob:.4f} at "
+        ret += f"(x, y) = ({self.box_x:.4f}, {self.box_y:.4f}) with " \
+               f"(width, height) = ({self.box_w:.4f}, {self.box_h:.4f}) and " \
+               f"objectness = {self.objectness:.4f}"
         return ret
 
 
@@ -192,6 +187,8 @@ class YOLOResults (object):
         * time (Accum): Almacena los tiempos de ejecución.
         * fps (float): Mantiene una relación de los FPS tras la última imagen
             ejecutada.
+        * objs (Accum): Acumula el número de objetos identificados
+        * empty (int): Cuenta el número de imágenes que no tuvieron detecciones
         * results (list): Lista de los resultados de cada una de las imágenes
             ejecutadas. Cada celda de la lista se corresponde a un diccionario
             con los siguientes elementos:
@@ -205,55 +202,60 @@ class YOLOResults (object):
     def __init__ (self):
         self.time = Accum()
         self.fps = 0.0
+        self.objs = Accum()
+        self.empty = 0
         self.results = list()
+        self._total = 0
 
     def append (self, img, time, dets, nboxes):
         """Añade nuevas imágenes a la lista de resultados."""
-        time = time.total_seconds()     # Casts to float
+        self._total += 1
         self.time.update(time)
         self.results.append({'time': time,
                             'current_fps': 0.0,
                             'image_path': img,
                             'detection': list()})
         self.results[-1]['current_fps'] = self.get_fps()
-
         for box in range(nboxes):
             for clase in range(Detection.NCLASSES):
                 if dets[box].prob[clase] > 0:
                     self.results[-1]['detection'].append(Detection(dets[box],
                                                                    clase))
+        total_dets = len(self.results[-1]['detection'])
+        if total_dets == 0:
+            self.empty += 1
+        self.objs.update(total_dets)
 
     def get_fps (self):
         """Calcula los FPS actuales"""
-        total_time = sum(res['time'] for res in self.results)
-        self.fps = len(self.results) / total_time
+        self.fps = self._total / self.time.total
         return self.fps
 
     def print (self):
         """Imprime por pantalla la ejecución total."""
         self.short_print()
         for result in self.results:
-            print(f"Image: {result['image_path']}")
-            print(f" - Time: {result['time']:.4f}")
-            print(f" - Accum FPS: {result['current_fps']:.4f}")
+            print(f"Imagen: {result['image_path'].decode('utf-8')}")
+            print(f" - Tiempo: {result['time']:.4f}")
+            print(f" - FPS acumulado: {result['current_fps']:.4f}")
             for det in result['detection']:
                 print(" - ", det)
             print("\n######################################################\n")
 
     def short_print (self):
         print()
-        print(f"Inference of {len(self.results)} images")
-        print(f"Total time taken = {self.time.total:.4f}")
-        print(f"Mean time per image = {self.time.mean:.4f}")
-        print(f"Mean FPS = {self.fps:.4f}")
+        print(f"Inferencia de {len(self.results)} imágenes")
+        print(f"Duración total = {self.time.total:.4f}")
+        print(f"Duración media por imagen = {self.time.mean:.4f}")
+        print(f"FPS medios = {self.fps:.4f}")
+        print(f"Objetos detectados por imagen en media = {self.objs.mean:.2f}")
+        print(f"Total de imágenes sin objetos detectados = " \
+              f"{self.empty} ({self.empty/self._total:.2%})")
         print()
 
 
-#
-# Funciones
-#
-def detect (fdata, fcfg, fweight, fimages, thresh=.5, hier_thresh=.5, nms=.45,
-            verbose=False):
+def detect (fdata, fcfg, fweight, fimages, thresh=.5, hier_thresh=.5, nms=.3,
+            verbose=False, predictions=False):
     """Ejecuta un proceso de detección completo, de una o varias imágenes,
     en función de diferentes parámetros.
 
@@ -281,20 +283,20 @@ def detect (fdata, fcfg, fweight, fimages, thresh=.5, hier_thresh=.5, nms=.45,
     set_net_threadpool(net)
 
     # Ejecutando la inferencia para todas las imágenes pasadas
-    if verbose: print(f"> Running for {len(fimages)} images...")
+    if verbose: print(f"> Infiriendo {len(fimages)} imágenes...")
     results = YOLOResults()
     Detection.NCLASSES = meta.classes
     Detection.CLASS_NAMES = meta.names
-    for image_path in fimages:
+    for i, image_path in enumerate(fimages):
         # Cargando imagen
-        if verbose: print(f"> Loading '{image_path}'...")
+        if verbose: print(f"> [{i+1}/{len(fimages)}] Cargando {image_path.decode('utf-8')!r}...")
         img = load_image_thread(image_path, net)
         sized = letterbox_image_thread(img, net)
 
         # Prediciendo y detectando
-        tstart = datetime.now()
+        tstart = time.perf_counter()
         network_predict(net, sized.data)
-        tstop = datetime.now()
+        tstop = time.perf_counter()
         nboxes = c_int(0)
         nboxes_pointer = pointer(nboxes)
         dets = get_network_boxes(net, img.w, img.h, thresh, hier_thresh, None,
@@ -305,6 +307,13 @@ def detect (fdata, fcfg, fweight, fimages, thresh=.5, hier_thresh=.5, nms=.45,
         if (nms):
             do_nms_sort(dets, nboxes, meta.classes, nms)
 
+        # Dibujando las predicciones
+        if predictions:
+            predname = "prediction-" + basename(image_path).decode('utf-8')[:-4]
+            draw_predictions(img, dets, nboxes, thresh, meta.names, meta.classes, \
+                             f"predictions/{predname}".encode("utf-8"))
+            if verbose: print(f"  Predicción guardada en {predname!r}")
+
         # Obteniendo resultados
         results.append(image_path, tstop-tstart, dets, nboxes)
 
@@ -313,56 +322,55 @@ def detect (fdata, fcfg, fweight, fimages, thresh=.5, hier_thresh=.5, nms=.45,
         free_image(img)
         free_image(sized)
 
-        if verbose: print("> Done.")
+        if verbose: print(f"  Hecho. {len(results.results[-1]['detection'])} objetos identificados")
 
     # Liberando memoria general del programa
     free_net_threadpool(net)
     nnp_deinitialize()
     free_network(net)
 
-    if verbose: print(f"> Finished in {results.time.total} seconds.")
+    if verbose: print(f"> Finalizado en {results.time.total} segundos.")
     return results
 
 
-#
 # Main
-#
 if __name__ == "__main__":
-
     # Argumentos en línea de comandos:
-    parser = argparse.ArgumentParser(description="Runs the YOLO Darknet")
+    parser = argparse.ArgumentParser(description="Ejecuta el detector de Darknet")
+
     #   Relacionados con archivos
     parser.add_argument('-d', default="cfg/coco.data", dest="data", type=str,
-                        help="Chooses the .data file")
+                        help="selecciona el archivo de datos (por defecto, coco.data)")
     parser.add_argument('-c', default="cfg/yolov3-tiny.cfg", dest="cfg", type=str,
-                        help="Chooes the .cfg file")
+                        help="selecciona el archivo de configuración (por defecto, yolov3-tiny.cfg)")
     parser.add_argument('-w', default="yolov3-tiny.weights", dest="weights", type=str,
-                        help="Chooses the .weights file")
+                        help="selecciona el archivo de pesos (por defecto, yolov3-tiny.weights)")
     parser.add_argument('-i', default="testing/dog.jpg", dest="images", type=str,
-                        help="Chooses the image or images directory")
+                        help="selecciona la imagen o el directorio de imágenes")
 
     #   Relacionados con hiperparámetros
     parser.add_argument('-t', '--thresh', default=.5, dest="thresh", type=float,
-                        help="Changes the network detection threshold (default, 0.5)")
+                        help="cambia el thresh de la red (por defecto, 0.5)")
     parser.add_argument('-ht', '--hier-thresh', default=.5, dest="hthresh", type=float,
-                        help="Changes the network detection hier threshold (default, 0.5)")
-    parser.add_argument('--nms', default=.45, dest="nms", type=float,
-                        help="Changes the Non-Maximum Supression value (default, 0.45)")
+                        help="cambia el hier_tresh de la red (por defecto, 0.5)")
+    parser.add_argument('--nms', default=.3, dest="nms", type=float,
+                        help="cambia el valor de NMS (por defecto, 0.3)")
 
     #   Otros
     parser.add_argument('-v', '--verbose', action="store_true", dest="verbose",
-                        help="Verbose mode")
+                        help="modo verbose")
     parser.add_argument('-n', default=-1, dest="limit", type=int,
-                        help="Limits the number of images taken from given directory")
+                        help="escoge la cantidad indicada de imágenes del directorio indicado")
+    parser.add_argument("-p", action="store_true", dest="predict",
+                        help="genera una imagen con las predicciones de cada inferencia")
     parser.add_argument('--long-output', action="store_true", dest="lout",
-                        help="Prints the long output on finish."\
-                             "If only one image is given, this is the defualt option.")
+                        help="Imprime por pantalla la detección completa."\
+                             "Si solo se infiere una imagen, se activa por defecto.")
+    parser.add_argument('-g', action="store_true", dest="graphics",
+                        help="genera dos gráficas con la evolución de FPS y duración")
 
     # Ejecución
     args = parser.parse_args()
-
-    #print(args.images)
-    #print(args.weights)
 
     # Convirtiendo imagen/carpeta en una lista de imágenes aleatoria.
     fimage = args.images
@@ -378,12 +386,21 @@ if __name__ == "__main__":
         images_list = [fimage]
     images_list = [bytes(i, encoding="utf-8") for i in images_list]
 
+    # Preparando otros elementos
+    if args.predict:
+        try:
+            mkdir("./predictions")
+        except FileExistsError:
+            pass
+        print("Las predicciones serán guardadas en ./predictions/")
+
     # Llamando al detector
     res = detect(bytes(args.data, encoding="utf-8"),
                  bytes(args.cfg, encoding="utf-8"),
                  bytes(args.weights, encoding="utf-8"),
                  images_list,
-                 args.thresh, args.hthresh, args.nms, verbose=args.verbose)
+                 args.thresh, args.hthresh, args.nms, verbose=args.verbose,
+                 predictions=args.predict)
 
     # Mostrando el resultado.
     if len(images_list) == 1:
@@ -394,3 +411,29 @@ if __name__ == "__main__":
         else:
             res.short_print()
 
+    if args.graphics:
+        print("Generando gráficas de FPS y tiempo")
+        fps_table = list()
+        time_table = list()
+        for r in res.results:
+            fps_table.append(r['current_fps'])
+            time_table.append(r['time'])
+
+        import matplotlib.pyplot as plt
+        fps_fig = plt.figure()
+        plt.plot(list(range(len(fps_table))), fps_table)
+        plt.grid(True, linestyle=':')
+        plt.xlabel("Images")
+        plt.ylabel("FPS")
+        plt.tight_layout()
+        fps_fig.savefig(f"{len(res.results)}-images-fps-progress.png")
+        print("Gráfica de FPS generada")
+
+        time_fig = plt.figure()
+        plt.plot(list(range(len(time_table))), time_table)
+        plt.grid(True, linestyle=':')
+        plt.xlabel("Images")
+        plt.ylabel("Time")
+        plt.tight_layout()
+        time_fig.savefig(f"{len(res.results)}-images-time-progress.png")
+        print("Gráfica de tiempo generada")

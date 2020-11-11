@@ -1,8 +1,8 @@
 /*
-    Python Utils Source Code
+    Funciones auxiliares en C para wrapper (cuerpo)
 
     Created:        09 May 20
-    Last modified:  09 May 20
+    Last modified:  08 Nov 20
 */
 #include "py_utils.h"
 
@@ -27,4 +27,10 @@ void py_set_net_threadpool (network *net) {
 
 void py_free_net_threadpool (network *net) {
     pthreadpool_destroy(net->threadpool);
+}
+
+void py_draw_predictions (image im, detection *dets, int nboxes, float thresh, char **names, int classes, const char *outfile) {
+    image **alphabet = load_alphabet();
+    draw_detections(im, dets, nboxes, thresh, names, alphabet, classes);
+    save_image(im, outfile);
 }

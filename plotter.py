@@ -1,33 +1,26 @@
 #!python3
 # -*- coding: utf-8 -*-
 """
-    Plotter de entrenamientos con YOLOv3
-
-    Este módulo permite analizar los logs de entrenamiento de YOLOv3 y obtener
-    CSVs y gráficas de los diferentes parámetros disponibles.
-
+    Código para generar gráficas informativas sobre los resultados de un
+    entrenamiento con Darknet.
+    Parte de los logs que Darknet genera.
     Creado:                 08 Jun 2020
-    Última modificación:    03 Jul 2020
-
+    Última modificación:    03 Nov 2020
     @author: Ángel Moreno Prieto
-
 """
 import argparse
 import matplotlib.pyplot as plt
 
-#
-# Definiciones
-#
-_TRAINING_IMAGES_FILE = "./training/oxford-pet/cat-dog-train.txt"
-#TOTAL_IMAGES = len(open(_TRAINING_IMAGES_FILE, 'r').readlines())
-TOTAL_IMAGES = 6000
 
-#
-# Clases
-#
+_TRAINING_IMAGES_FILE = "./training/oxford-pet/cat-dog-train.txt"
+TOTAL_IMAGES = 3688
+DESCRIPTION = "Análisis de logs de entrenamiento. \nLos posibles parámetros "\
+              "para los ejes son: batch, loss, avg_loss, rate, time, images y epoch"
+
+
 class Batch (object):
     """Clase Batch.
-    Almacena toda la información disponible por cada batch, es decir:
+    Almacena toda la información disponible por cada lote, es decir:
         * loss (float): Pérdida en entrenamiento, de la última iteración.
         * avg_loss (float): Media de pérdidas en entrenamiento.
         * learning_rate (float): Ratio de aprendizaje en la última iteración.
@@ -73,20 +66,27 @@ class Batch (object):
         return ret
 
 
-#
 # Main
-#
 if __name__ == "__main__":
-
     # Argumentos en línea de comandos:
-    parser = argparse.ArgumentParser(description="Análisis de logs de entrenamiento." \
-                                                 "\nLos posibles parámetros para los ejes son:" \
-                                                 "batch, loss, avg_loss, rate, time, images y epoch")
+    parser = argparse.ArgumentParser(description=DESCRIPTION)
     parser.add_argument("logfile", help="archivo de log del entrenamiento")
-    parser.add_argument("-x", type=str, default="batch", help="parámetro del eje X")
-    parser.add_argument("-y", type=str, default="avg_loss", help="parámetro del eje Y")
-    parser.add_argument("--csv", type=str, default="results.csv", help="nombre del archivo de salida CSV")
-    parser.add_argument("--plot_file", type=str, default=None, help="nombre del archivo de la gráfica")
+    parser.add_argument("-x", type=str, default="batch",
+                        help="parámetro del eje X")
+    parser.add_argument("-y", type=str, default="avg_loss",
+                        help="parámetro del eje Y")
+    parser.add_argument("-xmax", type=int, default=None,
+                        help="máximo valor en el eje X")
+    parser.add_argument("-xmin", type=int, default=None,
+                        help="mínimo valor en el eje X")
+    parser.add_argument("-ymax", type=int, default=None,
+                        help="máximo valor en el eje Y")
+    parser.add_argument("-ymin", type=int, default=None,
+                        help="mínimo valor en el eje X")
+    parser.add_argument("--csv", type=str, default="results.csv",
+                        help="nombre del archivo de salida CSV")
+    parser.add_argument("--plot_file", type=str, default=None,
+                        help="nombre del archivo de la gráfica")
     args = parser.parse_args()
 
     # Se recogen las líneas útiles del archivo de log:
@@ -108,18 +108,27 @@ if __name__ == "__main__":
         xvalues.append(xy[0])
         yvalues.append(xy[1])
 
-    print("Preparando CSV y gráfica...")
+    print("Preparando CSV")
     print(f" Eje X: {args.x}, Eje Y: {args.y}")
-    # Preparando el CSV
     fcsv = open(args.csv, 'w')
     for x, y in zip(xvalues, yvalues):
         fcsv.write(f"{x}, {y}\n")
     fcsv.close()
     print(f" CSV guardado en {args.csv}")
 
-    # Preparando gráfico
+    print("Preparando gráfica")
+    xmax = args.xmax or float("inf")
+    xmin = args.xmin or float("-inf")
+    ymax = args.ymax or float("inf")
+    ymin = args.ymin or float("-inf")
+    subxvalues = list()
+    subyvalues = list()
+    for x, y in zip(xvalues, yvalues):
+        if (xmin < x < xmax) and (ymin < y < ymax):
+            subxvalues.append(x)
+            subyvalues.append(y)
     fig = plt.figure()
-    plt.plot(xvalues, yvalues)
+    plt.plot(subxvalues, subyvalues)
     plt.grid(True, linestyle=':')
     plt.xlabel(f"{args.x.replace('_', ' ').capitalize()}")
     plt.ylabel(f"{args.y.replace('_', ' ').capitalize()}")
@@ -128,8 +137,4 @@ if __name__ == "__main__":
         args.plot_file = f"plot-{args.x}-{args.y}.png"
     fig.savefig(args.plot_file, dpi=1000)
     print(f" Gráfica guardada en {args.plot_file}")
-
     print("Finalizado!")
-
-
-

@@ -8,12 +8,10 @@
 # Checking given image exists and running darknet
 IMAGE="$1"
 if [ -f "$IMAGE" ]; then
-	identify -format "Image size: %wx%h\n\n" "$IMAGE"
 	./darknet detect cfg/yolov3-tiny.cfg yolov3-tiny.weights "$IMAGE"
 else
 	IMAGE="testing/$IMAGE"
 	if [ -f "$IMAGE" ]; then
-		identify -format "Image size: %wx%h\n\n" "$IMAGE"
 		./darknet detect cfg/yolov3-tiny.cfg yolov3-tiny.weights "$IMAGE"
 	else
 		echo "$IMAGE does not exist."
