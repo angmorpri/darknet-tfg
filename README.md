@@ -1,8 +1,8 @@
 Based on <https://github.com/shizukachan/darknet-nnpack>
 
-# Darknet with NNPACK for Raspberry Pi 3 B (End-of-degree Project)
+# Darknet with NNPACK for Raspberry Pi 3 B (Bachelor's Thesis Project)
 ## Abstract
-This repository will contain all the workarounds of my TFG.
+This repository will contain all the workarounds of my BS thesis.
 Mainly it will consists of Darknet implementation code and testing codes and data.
 The goal is to measure and analyze the performance of YOLOv3 on a Raspberry.
 
