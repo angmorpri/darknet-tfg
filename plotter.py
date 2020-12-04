@@ -48,8 +48,8 @@ class Batch (object):
 
         retx, rety = None, None
         try:
-            retx = eval(f"self.{x}")
-            rety = eval(f"self.{y}")
+            retx = getattr(self, x)
+            rety = getattr(self, y)
         except AttributeError:
             if retx is None:
                 print(f"Error: El parámetro '{x}' para el eje X no existe")
@@ -101,22 +101,29 @@ if __name__ == "__main__":
 
     # Una vez se tiene la lista de batches, se preparan los valores de las
     # gráficas a imprimir.
-    xvalues = list()
-    yvalues = list()
+    table = dict()      # X: (Y1, Y2, Y3, ..., Yn)
     for batch in batches:
-        xy = batch.getXY(args.x, args.y)
-        xvalues.append(xy[0])
-        yvalues.append(xy[1])
+        x, y = batch.getXY(args.x, args.y)
+        if x not in table:
+            table[x] = list()
+        table[x].append(y)   # Un mismo valor de X puede llegar a tener varias Y
 
     print("Preparando CSV")
     print(f" Eje X: {args.x}, Eje Y: {args.y}")
     fcsv = open(args.csv, 'w')
-    for x, y in zip(xvalues, yvalues):
-        fcsv.write(f"{x}, {y}\n")
+    for x, ys in table.items():
+        for y in ys:
+            fcsv.write(f"{x}, {y}\n")
     fcsv.close()
     print(f" CSV guardado en {args.csv}")
 
     print("Preparando gráfica")
+    xvalues = list(table.keys())
+    yvalues = list()
+    for ys in table.values():
+        noninf = [y for y in ys if y == y]  # Elimina NaNs
+        if noninf:
+            yvalues.append(noninf[-1])
     xmax = args.xmax or float("inf")
     xmin = args.xmin or float("-inf")
     ymax = args.ymax or float("inf")
